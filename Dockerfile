@@ -25,6 +25,7 @@ RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
     libharfbuzz-dev \
     libjpeg-dev \
     libpng-dev \
+    libsodium-dev \
     libtiff5-dev \
   ;
 
