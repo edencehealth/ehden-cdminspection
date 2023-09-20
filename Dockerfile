@@ -35,8 +35,9 @@ COPY renv.lock ./
 RUN --mount=type=cache,sharing=private,target=/renv_cache \
     --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
   set -eux; \
-  find /renv_cache /root/.cache/R/renv || :; \
   Rscript \
+    --vanilla \
+    -e 'options(renv.config.cache.symlinks = FALSE)' \
     -e 'renv::activate("/app")' \
     -e 'renv::restore()' \
     -e 'renv::isolate()' \
@@ -46,6 +47,7 @@ RUN --mount=type=cache,sharing=private,target=/renv_cache \
 ENV DATABASECONNECTOR_JAR_FOLDER="/usr/local/lib/DatabaseConnectorJars"
 RUN set -eux; \
   Rscript \
+    --vanilla \
     -e 'renv::activate("/app")' \
     -e 'library(DatabaseConnector)' \
     -e 'downloadJdbcDrivers("oracle")' \
