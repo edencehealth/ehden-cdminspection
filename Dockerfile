@@ -1,4 +1,4 @@
-FROM edence/ohdsi-rcore
+FROM edence/rcore
 LABEL maintainer="edenceHealth <info@edence.health>"
 
 ARG AG="apt-get -yq"
@@ -7,6 +7,7 @@ ARG DEBIAN_FRONTEND="noninteractive"
 RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
     --mount=type=cache,sharing=private,target=/var/lib/apt \
   set -eux; \
+  find /var/cache/app /var/lib/apt || :; \
   # enable the above apt cache mount to work by preventing auto-deletion
   rm -f /etc/apt/apt.conf.d/docker-clean; \
   echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
@@ -29,10 +30,12 @@ RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
     libtiff5-dev \
   ;
 
-
+WORKDIR /app
 COPY renv.lock ./
 RUN --mount=type=cache,sharing=private,target=/renv_cache \
+    --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
   set -eux; \
+  find /renv_cache /root/.cache/R/renv || :; \
   Rscript \
     -e 'renv::activate("/app")' \
     -e 'renv::restore()' \
