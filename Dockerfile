@@ -31,16 +31,21 @@ RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
   ;
 
 WORKDIR /app
-COPY renv.lock ./
-RUN --mount=type=cache,sharing=private,target=/renv_cache \
-    --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
+COPY renv.txt ./
+
+RUN \
+  --mount=type=cache,sharing=private,target=/renv_cache \
+  --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
+  --mount=type=secret,id=GITHUB_PAT \
+  if [ -f "/run/secrets/GITHUB_PAT" ]; then export GITHUB_PAT=$(cat "/run/secrets/GITHUB_PAT"); fi; \
   set -eux; \
   Rscript \
     --vanilla \
     -e 'options(renv.config.cache.symlinks = FALSE)' \
-    -e 'renv::activate("/app")' \
-    -e 'renv::restore()' \
+    -e 'renv::activate()' \
+    -e 'renv::install(packages=readLines("renv.txt"))' \
     -e 'renv::isolate()' \
+    -e 'renv::snapshot(type="all")' \
   ;
 
 # https://ohdsi.github.io/DatabaseConnector/articles/Connecting.html#the-jar-folder
@@ -50,11 +55,7 @@ RUN set -eux; \
     --vanilla \
     -e 'renv::activate("/app")' \
     -e 'library(DatabaseConnector)' \
-    -e 'downloadJdbcDrivers("oracle")' \
-    -e 'downloadJdbcDrivers("postgresql")' \
-    -e 'downloadJdbcDrivers("redshift")' \
-    -e 'downloadJdbcDrivers("spark")' \
-    -e 'downloadJdbcDrivers("sql server")' \
+    -e 'downloadJdbcDrivers("all")' \
   ;
 
 WORKDIR /output
