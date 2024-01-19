@@ -36,7 +36,7 @@ COPY renv.txt ./
 RUN \
   --mount=type=cache,sharing=private,target=/renv_cache \
   --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
-  --mount=type=secret,id=GITHUB_PAT \
+  # --mount=type=secret,id=GITHUB_PAT \
   if [ -f "/run/secrets/GITHUB_PAT" ]; then export GITHUB_PAT=$(cat "/run/secrets/GITHUB_PAT"); fi; \
   set -eux; \
   Rscript \
