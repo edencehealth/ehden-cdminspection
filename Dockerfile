@@ -1,19 +1,12 @@
-FROM edence/ohdsi-rcore
+FROM edence/rcore
 LABEL maintainer="edenceHealth <info@edence.health>"
 
-ARG AG="apt-get -yq"
+ARG AG="apt-get -yq --no-install-recommends"
 ARG DEBIAN_FRONTEND="noninteractive"
 
-RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
-    --mount=type=cache,sharing=private,target=/var/lib/apt \
-  set -eux; \
-  # enable the above apt cache mount to work by preventing auto-deletion
-  rm -f /etc/apt/apt.conf.d/docker-clean; \
-  echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
-    >/etc/apt/apt.conf.d/01keep-debs; \
-  # apt installations
+RUN set -eux; \
   $AG update; \
-  $AG install --no-install-recommends \
+  $AG install \
     cmake \
     curl \
     iputils-ping \
@@ -25,35 +18,40 @@ RUN --mount=type=cache,sharing=private,target=/var/cache/apt \
     libharfbuzz-dev \
     libjpeg-dev \
     libpng-dev \
+    libsodium-dev \
     libtiff5-dev \
   ;
 
+WORKDIR /app
+COPY renv.txt ./
 
-COPY renv.lock ./
-RUN --mount=type=cache,sharing=private,target=/renv_cache \
+RUN \
+  --mount=type=cache,sharing=private,target=/renv_cache \
+  --mount=type=cache,sharing=private,target=/root/.cache/R/renv \
+  --mount=type=secret,id=GITHUB_PAT \
+  if [ -f "/run/secrets/GITHUB_PAT" ]; then export GITHUB_PAT=$(cat "/run/secrets/GITHUB_PAT"); fi; \
   set -eux; \
   Rscript \
-    -e 'renv::activate("/app")' \
-    -e 'renv::restore()' \
+    -e 'download.file("https://raw.githubusercontent.com/OHDSI/Hades/main/hadesWideReleases/2023Q3/renv.lock", "hades-renv.lock")' \
+    -e 'options(renv.config.cache.symlinks = FALSE)' \
+    # -e 'renv::activate()' \
+    -e 'renv::restore(lockfile="hades-renv.lock")' \
+    -e 'renv::install(packages=readLines("renv.txt"))' \
     -e 'renv::isolate()' \
+    -e 'renv::snapshot(type="all")' \
   ;
 
 # https://ohdsi.github.io/DatabaseConnector/articles/Connecting.html#the-jar-folder
 ENV DATABASECONNECTOR_JAR_FOLDER="/usr/local/lib/DatabaseConnectorJars"
 RUN set -eux; \
   Rscript \
-    -e 'renv::activate("/app")' \
-    -e 'library(DatabaseConnector)' \
-    -e 'downloadJdbcDrivers("oracle")' \
-    -e 'downloadJdbcDrivers("postgresql")' \
-    -e 'downloadJdbcDrivers("redshift")' \
-    -e 'downloadJdbcDrivers("spark")' \
-    -e 'downloadJdbcDrivers("sql server")' \
+    -e 'renv::activate()' \
+    -e 'DatabaseConnector::downloadJdbcDrivers("all")' \
   ;
 
 WORKDIR /output
 
-COPY ["entrypoint.sh", "cdm_inspection.R", "/app/"]
+COPY ["cdm_inspection.R", "/app/"]
 USER nonroot
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/Rscript", "/app/cdm_inspection.R"]

@@ -24,6 +24,7 @@ General options:
   -h, --help                        Show this help message
   --output-base=<path>              The base output directory in which to write results [default: ./results]
   --quiet                           Runs the cdmInspection and catalogueExport with verboseMode set to FALSE and generateResultsDocument with silent set to TRUE
+  --s3-target=<str>                 Optional AWS S3 bucket path to sync with the output_base directory (for uploading results to S3)
   --sql-only                        Print the SQL queries that would be executed but do not actually execute the queries
   --output-doc-template=<name>      The name of the generateResultsDocument docTemplate to use [default: EHDEN]
   --small-cell-count=<int>          To avoid patient identifiability, only cells with result counts larger than this value will be included the the output [default: 5]
@@ -411,5 +412,22 @@ if (!args$no_catalogue_export) {
     # verboseMode: Boolean to determine if the console will show all execution
     # steps. Default = TRUE
     verboseMode = !args$quiet
+  )
+}
+
+
+if (args$s3_target != "") {
+  # https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/system
+  system(
+    paste("aws", "s3", "sync", sQuote(args$output_base), sQuote(args$s3_target)),
+    intern = FALSE,
+    ignore.stdout = FALSE,
+    ignore.stderr = FALSE,
+    wait = TRUE,
+    input = NULL,
+    show.output.on.console = TRUE,
+    minimized = FALSE,
+    invisible = TRUE,
+    timeout = 0
   )
 }

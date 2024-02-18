@@ -5,3 +5,4 @@
 **/.venv
 **/.vscode
 **/venv
+.github_pat.txt

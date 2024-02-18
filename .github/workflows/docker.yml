@@ -1,15 +1,25 @@
 name: Docker
 
-on:
+"on":
   push:
     branches:
       - main
     tags:
       - '*.*.*'
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+    branches:
+      - main
 
 jobs:
   image:
-    uses: edencehealth/workflows/.github/workflows/dockerimage.yml@main
+    uses: edencehealth/workflows/.github/workflows/dockerimage.yml@v1
     with:
-      container_name: ehden-cdm-inspection
+      container_name: ehden-cdminspection
+      push_readme: README.md
+      push: true
     secrets: inherit
