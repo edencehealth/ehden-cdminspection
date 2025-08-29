@@ -1,4 +1,4 @@
-FROM edence/ohdsi-rcore
+FROM edence/rcore:1.4
 LABEL maintainer="edenceHealth <info@edence.health>"
 
 ARG AG="apt-get -yq"

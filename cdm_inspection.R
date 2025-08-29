@@ -187,13 +187,57 @@ if (args$db_dbms %in% name_concat_dbms) {
   server <- args$db_hostname
 }
 
+extra_settings <- NULL
+
+if (args$db_dbms == "sql server") {
+  # https://learn.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url?view=sql-server-ver16
+  # https://learn.microsoft.com/en-us/sql/tools/configuration-manager/sql-server-browser-service?view=sql-server-ver16
+  #
+  # sql server supports a concept called "instance name", which provides a
+  # way to have multiple database services listening on a single server; the
+  # default instance will listen on port 1433, other instances will listen on
+  # arbitrary high port numbers; when clients want to connect to a
+  # non-default instanceName, they first query the server for the
+  # instanceName and the server responds with the TCP port number that
+  # instance is listening on; so it's a little like DNS (but for PORTS on a
+  # server instead of SERVERS on a network)
+  #
+  # NOTE: when both the instanceName and the port number are given to the
+  # driver, the instanceName is ignored! But to keep our argument processing
+  # simple we're doing the opposite; WHEN AN INSTANCENAME IS GIVEN WE IGNORE
+  # args$db_port; we know an instance name is being used if the
+  # args$db_hostname has the following format: "serverName\instanceName"
+
+  # Check if args$db_hostname contains a backslash (i.e., an instance name)
+  if (grepl("\\", db_hostname, fixed = TRUE)) {
+    hostname_parts <- strsplit(db_hostname, "\\", fixed = TRUE)[[1]]
+    server_name <- hostname_parts[1]
+    instance_name <- hostname_parts[2]
+    cat(
+      "Note: using MS SQL Server instance name support; ",
+      "server_name:", server_name, "; ",
+      "instance_name:", instance_name, "; ",
+      "\n"
+    )
+
+    # Append instanceName to extra_settings
+    extra_settings <- paste0(extra_settings, ";instanceName=", instance_name)
+    db_hostname <- server_name
+    db_port <- NULL
+  }
+
+  # sql server need takes the db name as an extra setting
+  extra_settings <- paste0(extra_settings, ";databaseName=", args$db_name)
+}
+
 # Create connection details using DatabaseConnector utility.
 connection_details <- createConnectionDetails(
   dbms = args$db_dbms,
   user = args$db_username,
   password = args$db_password,
   server = server,
-  port = args$db_port,
+  port = db_port,
+  extraSettings = extra_settings,
   pathToDriver = args$databaseconnector_jar_folder
 )
 
